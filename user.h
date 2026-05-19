@@ -3,6 +3,9 @@
 #define MAX_PASSWORD  50
 #define MAX_BORROWS    5
 
+#define STUDENT    1
+#define PROFESSOR  2
+
 typedef struct {
     char login[MAX_LOGIN];          /* identifiant de connexion    */
     char password[MAX_PASSWORD];    /* mot de passe                */
