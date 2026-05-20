@@ -2,7 +2,7 @@
 #include <string.h>
 #include <time.h>
 #include "user.h"
-void initUser(User *u, char *login, char *password, int role) {
+void initUser(User *u, const char *login, const char *password, int role) {
     int i;
     /* strcpy copie les chaines caractere par caractere */
     strcpy(u->login,    login);
@@ -36,6 +36,66 @@ void displayUser(User *u) {
 
 int isStudent(User *u) {
     return u->role == STUDENT;
+}
+
+const char *getRoleText(const User *u) {
+    if (u != NULL && u->role == PROFESSOR) {
+        return "Professeur";
+    }
+    return "Etudiant";
+}
+
+User *findUserByLogin(User *users, int userCount, const char *login) {
+    int i;
+
+    for (i = 0; i < userCount; i++) {
+        if (strcmp(users[i].login, login) == 0) {
+            return &users[i];
+        }
+    }
+    return NULL;
+}
+
+void initDefaultUsers(User *users, int *userCount) {
+    *userCount = 0;
+    initUser(&users[*userCount], "etudiant1", "1234", STUDENT);
+    (*userCount)++;
+    initUser(&users[*userCount], "prof1", "1234", PROFESSOR);
+    (*userCount)++;
+}
+
+int createUserAccount(User *users, int *userCount, int maxUsers, const char *login, const char *password, int role) {
+    if (users == NULL || userCount == NULL || login == NULL || password == NULL) {
+        return 0;
+    }
+    if (*userCount >= maxUsers) {
+        return 0;
+    }
+    if (login[0] == '\0' || password[0] == '\0') {
+        return 0;
+    }
+    if (role != STUDENT && role != PROFESSOR) {
+        return 0;
+    }
+    if (findUserByLogin(users, *userCount, login) != NULL) {
+        return 0;
+    }
+
+    initUser(&users[*userCount], login, password, role);
+    (*userCount)++;
+    return 1;
+}
+
+User *loginUser(User *users, int userCount, const char *login, const char *password) {
+    User *user = findUserByLogin(users, userCount, login);
+
+    if (user == NULL) {
+        return NULL;
+    }
+    if (strcmp(user->password, password) != 0) {
+        return NULL;
+    }
+    return user;
 }
 
 /* ============================================================

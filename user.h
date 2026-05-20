@@ -16,11 +16,21 @@ typedef struct {
 } User;
 
 /* Remplit les champs d'un User avec les informations de base */
-void initUser(User *u, char *login, char *password, int role);
+void initUser(User *u, const char *login, const char *password, int role);
 /* Affiche les informations d'un utilisateur dans le terminal */
 void displayUser(User *u);
 /* Retourne 1 si l'utilisateur est un etudiant, 0 sinon */
 int  isStudent(User *u);
+/* Retourne "Etudiant" ou "Professeur" selon le role */
+const char *getRoleText(const User *u);
+/* Cherche un utilisateur par login */
+User *findUserByLogin(User *users, int userCount, const char *login);
+/* Cree 2 comptes de test en memoire */
+void initDefaultUsers(User *users, int *userCount);
+/* Cree un compte utilisateur si les infos sont valides */
+int createUserAccount(User *users, int *userCount, int maxUsers, const char *login, const char *password, int role);
+/* Verifie login + mot de passe et retourne l'utilisateur */
+User *loginUser(User *users, int userCount, const char *login, const char *password);
 /* Retourne 1 si l'utilisateur peut encore emprunter un livre
  * Verifie les regles : retard, nombre max de livres         */
 int  canBorrow(User *u);
