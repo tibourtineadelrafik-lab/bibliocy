@@ -100,6 +100,7 @@ static void printMenu(const User *currentUser) {
     printf("2. Ajouter un livre (professeur)\n");
     printf("3. Supprimer un livre (professeur)\n");
     printf("4. Se deconnecter\n");
+    printf("5. Rechercher un livre par titre\n");
     printf("0. Quitter\n");
 }
 
@@ -122,9 +123,11 @@ int main(void) {
     printf("- etudiant1 / 1234\n");
     printf("- prof1 / 1234\n");
 
+    /* Boucle principale: auth puis actions bibliotheque. */
     while (running) {
         int choice;
 
+        /* Tant qu'aucun utilisateur n'est connecte, on reste sur l'ecran d'auth. */
         if (currentUser == NULL) {
             printAuthMenu();
             choice = readInt("Votre choix: ");
@@ -153,6 +156,7 @@ int main(void) {
             char author[MAX_AUTHOR];
             char category[MAX_CATEGORY];
 
+            /* Regle du projet: un etudiant ne peut pas ajouter. */
             if (isStudent(currentUser)) {
                 printf("Seul un professeur peut ajouter un livre.\n");
                 continue;
@@ -171,6 +175,7 @@ int main(void) {
         } else if (choice == 3) {
             int idToDelete;
 
+            /* Regle du projet: un etudiant ne peut pas supprimer. */
             if (isStudent(currentUser)) {
                 printf("Seul un professeur peut supprimer un livre.\n");
                 continue;
@@ -180,6 +185,20 @@ int main(void) {
 
             if (removeBookById(&lib, idToDelete)) {
                 printf("Livre supprime.\n");
+            } else {
+                printf("Livre non trouve.\n");
+            }
+        } else if (choice == 5) {
+            char titleToSearch[MAX_TITLE];
+            int index;
+
+            /* Recherche simple: comparaison exacte du titre saisi. */
+            readText("Titre a rechercher: ", titleToSearch, MAX_TITLE);
+            index = searchByTitle(lib.books, lib.nbBooks, titleToSearch);
+
+            if (index >= 0) {
+                printf("Livre trouve:\n");
+                displayBook(&lib.books[index]);
             } else {
                 printf("Livre non trouve.\n");
             }
