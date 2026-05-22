@@ -36,3 +36,9 @@ User *loginUser(User *users, int userCount, const char *login, const char *passw
 int  canBorrow(User *u);
 /* Retourne 1 si l'utilisateur a au moins un livre en retard */
 int  hasLateBooks(User *u);
+/* Emprunte un livre si les regles sont respectees */
+int borrowBook(User *u, Book *books, int nbBooks, int bookId);
+/* Retourne un livre emprunte par l'utilisateur */
+int returnBook(User *u, Book *books, int nbBooks, int bookId);
+/* Affiche la liste des livres empruntes par l'utilisateur */
+void displayBorrowedBooks(User *u, Book *books, int nbBooks);

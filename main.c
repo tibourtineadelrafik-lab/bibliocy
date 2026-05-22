@@ -42,6 +42,14 @@ static void readText(const char *prompt, char *buffer, int size) {
     buffer[strcspn(buffer, "\n")] = '\0';
 }
 
+/* Ajoute quelques livres de test pour avancer sans fichier de sauvegarde. */
+static void initTestBooks(Library *lib) {
+    createBookAndAdd(lib, 1, "Livre 1", "Auteur 1", "Roman");
+    createBookAndAdd(lib, 2, "Livre 2", "Auteur 2", "Informatique");
+    createBookAndAdd(lib, 3, "Livre 3", "Auteur 3", "Histoire");
+    createBookAndAdd(lib, 4, "Livre 4", "Auteur 1", "Science");
+}
+
 /* Creation de compte tres simple. */
 static int createAccount(User *users, int *userCount) {
     char login[MAX_LOGIN];
@@ -101,6 +109,13 @@ static void printMenu(const User *currentUser) {
     printf("3. Supprimer un livre (professeur)\n");
     printf("4. Se deconnecter\n");
     printf("5. Rechercher un livre par titre\n");
+    printf("6. Rechercher un livre par auteur\n");
+    printf("7. Afficher les livres disponibles\n");
+    printf("8. Trier les livres par titre et afficher\n");
+    printf("9. Trier les livres par auteur et afficher\n");
+    printf("10. Emprunter un livre\n");
+    printf("11. Retourner un livre\n");
+    printf("12. Afficher mes emprunts\n");
     printf("0. Quitter\n");
 }
 
@@ -118,6 +133,7 @@ int main(void) {
     }
 
     initDefaultUsers(users, &userCount);
+    initTestBooks(&lib);
 
     printf("Comptes de test:\n");
     printf("- etudiant1 / 1234\n");
@@ -174,6 +190,8 @@ int main(void) {
             }
         } else if (choice == 3) {
             int idToDelete;
+            char confirm[10];
+            Book *bookToDelete;
 
             /* Regle du projet: un etudiant ne peut pas supprimer. */
             if (isStudent(currentUser)) {
@@ -182,6 +200,24 @@ int main(void) {
             }
 
             idToDelete = readInt("ID du livre a supprimer: ");
+            bookToDelete = getBookById(&lib, idToDelete);
+            if (bookToDelete == NULL) {
+                printf("Livre non trouve.\n");
+                continue;
+            }
+
+            /* On evite de supprimer un livre qui est deja emprunte. */
+            if (bookToDelete->available == 0) {
+                printf("Suppression impossible: livre actuellement emprunte.\n");
+                continue;
+            }
+
+            /* Petite securite: on demande une confirmation avant suppression. */
+            readText("Confirmer suppression ? (o/n): ", confirm, 10);
+            if (confirm[0] != 'o' && confirm[0] != 'O') {
+                printf("Suppression annulee.\n");
+                continue;
+            }
 
             if (removeBookById(&lib, idToDelete)) {
                 printf("Livre supprime.\n");
@@ -202,6 +238,65 @@ int main(void) {
             } else {
                 printf("Livre non trouve.\n");
             }
+        } else if (choice == 6) {
+            char authorToSearch[MAX_AUTHOR];
+            int index;
+
+            readText("Auteur a rechercher: ", authorToSearch, MAX_AUTHOR);
+            index = searchByAuthor(lib.books, lib.nbBooks, authorToSearch);
+
+            if (index >= 0) {
+                printf("Livre trouve:\n");
+                displayBook(&lib.books[index]);
+            } else {
+                printf("Livre non trouve.\n");
+            }
+        } else if (choice == 7) {
+            displayAvailableBooks(lib.books, lib.nbBooks);
+        } else if (choice == 8) {
+            /* Tri du tableau par titre puis affichage du resultat. */
+            sortByTitle(lib.books, lib.nbBooks);
+            displayLibrary(&lib);
+        } else if (choice == 9) {
+            /* Tri du tableau par auteur puis affichage du resultat. */
+            sortByAuthor(lib.books, lib.nbBooks);
+            displayLibrary(&lib);
+        } else if (choice == 10) {
+            int idToBorrow;
+            Book *book;
+
+            idToBorrow = readInt("ID du livre a emprunter: ");
+            if (borrowBook(currentUser, lib.books, lib.nbBooks, idToBorrow)) {
+                printf("Emprunt valide.\n");
+            } else {
+                book = getBookById(&lib, idToBorrow);
+                if (book == NULL) {
+                    printf("Livre non trouve.\n");
+                } else if (book->available == 0) {
+                    printf("Livre deja emprunte par %s.\n", book->borrower);
+                } else {
+                    printf("Emprunt refuse (retard ou limite atteinte).\n");
+                }
+            }
+        } else if (choice == 11) {
+            int idToReturn;
+            Book *book;
+
+            idToReturn = readInt("ID du livre a retourner: ");
+            if (returnBook(currentUser, lib.books, lib.nbBooks, idToReturn)) {
+                printf("Retour valide.\n");
+            } else {
+                book = getBookById(&lib, idToReturn);
+                if (book == NULL) {
+                    printf("Livre non trouve.\n");
+                } else if (book->available == 1) {
+                    printf("Ce livre est deja disponible.\n");
+                } else {
+                    printf("Retour refuse: ce livre n'est pas emprunte par vous.\n");
+                }
+            }
+        } else if (choice == 12) {
+            displayBorrowedBooks(currentUser, lib.books, lib.nbBooks);
         } else if (choice == 4) {
             currentUser = NULL;
             printf("Deconnexion.\n");
