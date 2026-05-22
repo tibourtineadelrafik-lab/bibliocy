@@ -1,10 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "library.h"
 #include "user.h"
 
 #define MAX_USERS 100
+#define BOOKS_FILE "books.txt"
+#define USERS_FILE "users.txt"
 
 static void clearInputBuffer(void) {
     int c;
@@ -38,10 +41,6 @@ static void readText(const char *prompt, char *buffer, int size) {
     buffer[strcspn(buffer, "\n")] = '\0';
 }
 
-<<<<<<< HEAD
-/* Ajoute quelques livres de test pour avancer sans fichier de sauvegarde. */
-=======
->>>>>>> 31a8dcc (Add borrow/return and file save)
 static void initTestBooks(Library *lib) {
     createBookAndAdd(lib, 1, "Livre 1", "Auteur 1", "Roman");
     createBookAndAdd(lib, 2, "Livre 2", "Auteur 2", "Informatique");
@@ -49,9 +48,6 @@ static void initTestBooks(Library *lib) {
     createBookAndAdd(lib, 4, "Livre 4", "Auteur 1", "Science");
 }
 
-<<<<<<< HEAD
-/* Creation de compte tres simple. */
-=======
 static int saveBooks(const Library *lib) {
     FILE *file;
     int i;
@@ -279,7 +275,6 @@ static void loadDataOrInitDefaults(Library *lib, User *users, int *userCount) {
     }
 }
 
->>>>>>> 31a8dcc (Add borrow/return and file save)
 static int createAccount(User *users, int *userCount) {
     char login[MAX_LOGIN];
     char password[MAX_PASSWORD];
@@ -359,10 +354,9 @@ int main(void) {
         return 1;
     }
 
-    initDefaultUsers(users, &userCount);
-    initTestBooks(&lib);
+    loadDataOrInitDefaults(&lib, users, &userCount);
 
-    printf("Comptes de test:\n");
+    printf("Comptes de test (si premier lancement):\n");
     printf("- etudiant1 / 1234\n");
     printf("- prof1 / 1234\n");
 
@@ -376,7 +370,9 @@ int main(void) {
             if (choice == 1) {
                 currentUser = loginAccount(users, userCount);
             } else if (choice == 2) {
-                createAccount(users, &userCount);
+                if (createAccount(users, &userCount) && !saveAll(&lib, users, userCount)) {
+                    printf("Attention: sauvegarde impossible.\n");
+                }
             } else if (choice == 0) {
                 running = 0;
             } else {
@@ -409,6 +405,9 @@ int main(void) {
 
             if (createBookAndAdd(&lib, id, title, author, category)) {
                 printf("Livre ajoute.\n");
+                if (!saveAll(&lib, users, userCount)) {
+                    printf("Attention: sauvegarde impossible.\n");
+                }
             } else {
                 printf("Ajout impossible (id deja utilise ou memoire).\n");
             }
@@ -442,6 +441,9 @@ int main(void) {
 
             if (removeBookById(&lib, idToDelete)) {
                 printf("Livre supprime.\n");
+                if (!saveAll(&lib, users, userCount)) {
+                    printf("Attention: sauvegarde impossible.\n");
+                }
             } else {
                 printf("Livre non trouve.\n");
             }
@@ -486,6 +488,9 @@ int main(void) {
             idToBorrow = readInt("ID du livre a emprunter: ");
             if (borrowBook(currentUser, lib.books, lib.nbBooks, idToBorrow)) {
                 printf("Emprunt valide.\n");
+                if (!saveAll(&lib, users, userCount)) {
+                    printf("Attention: sauvegarde impossible.\n");
+                }
             } else {
                 book = getBookById(&lib, idToBorrow);
                 if (book == NULL) {
@@ -503,6 +508,9 @@ int main(void) {
             idToReturn = readInt("ID du livre a retourner: ");
             if (returnBook(currentUser, lib.books, lib.nbBooks, idToReturn)) {
                 printf("Retour valide.\n");
+                if (!saveAll(&lib, users, userCount)) {
+                    printf("Attention: sauvegarde impossible.\n");
+                }
             } else {
                 book = getBookById(&lib, idToReturn);
                 if (book == NULL) {
@@ -528,6 +536,10 @@ int main(void) {
         } else {
             printf("Choix invalide.\n");
         }
+    }
+
+    if (!saveAll(&lib, users, userCount)) {
+        printf("Attention: sauvegarde finale impossible.\n");
     }
 
     freeLibrary(&lib);
