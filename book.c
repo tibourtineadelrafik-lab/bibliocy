@@ -1,6 +1,22 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "book.h"
+
+/* Copie un texte en minuscules dans dst. */
+static void toLowerCopy(const char *src, char *dst, int maxSize) {
+    int i = 0;
+
+    if (src == NULL || dst == NULL || maxSize <= 0) {
+        return;
+    }
+
+    while (src[i] != '\0' && i < maxSize - 1) {
+        dst[i] = (char)tolower((unsigned char)src[i]);
+        i++;
+    }
+    dst[i] = '\0';
+}
 
 void initBook(Book *b, int id, char *title, char *author, char *category) {
     b->id = id;
@@ -50,9 +66,19 @@ void displayAvailableBooks(Book *books, int nbBooks) {
 
 int searchByTitle(Book *books, int nbBooks, char *title) {
     int i;
+    char searchText[MAX_TITLE];
+    char currentTitle[MAX_TITLE];
+
+    if (books == NULL || title == NULL || title[0] == '\0') {
+        return -1;
+    }
+
+    /* Recherche souple: ignore majuscules/minuscules et accepte une partie du titre. */
+    toLowerCopy(title, searchText, MAX_TITLE);
 
     for (i = 0; i < nbBooks; i++) {
-        if (strcmp(books[i].title, title) == 0) {
+        toLowerCopy(books[i].title, currentTitle, MAX_TITLE);
+        if (strstr(currentTitle, searchText) != NULL) {
             return i;
         }
     }
@@ -62,9 +88,19 @@ int searchByTitle(Book *books, int nbBooks, char *title) {
 
 int searchByAuthor(Book *books, int nbBooks, char *author) {
     int i;
+    char searchText[MAX_AUTHOR];
+    char currentAuthor[MAX_AUTHOR];
+
+    if (books == NULL || author == NULL || author[0] == '\0') {
+        return -1;
+    }
+
+    /* Meme logique que pour le titre: recherche souple et sans casse stricte. */
+    toLowerCopy(author, searchText, MAX_AUTHOR);
 
     for (i = 0; i < nbBooks; i++) {
-        if (strcmp(books[i].author, author) == 0) {
+        toLowerCopy(books[i].author, currentAuthor, MAX_AUTHOR);
+        if (strstr(currentAuthor, searchText) != NULL) {
             return i;
         }
     }

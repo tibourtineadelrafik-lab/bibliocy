@@ -228,7 +228,7 @@ int main(void) {
             char titleToSearch[MAX_TITLE];
             int index;
 
-            /* Recherche simple: comparaison exacte du titre saisi. */
+            /* Recherche souple: on peut taper une partie du titre, sans respecter la casse. */
             readText("Titre a rechercher: ", titleToSearch, MAX_TITLE);
             index = searchByTitle(lib.books, lib.nbBooks, titleToSearch);
 
