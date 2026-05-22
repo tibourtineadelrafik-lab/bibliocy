@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+
 #include "user.h"
 
 #define DAY_SECONDS (24L * 60L * 60L)
 
-/* Cherche l'indice d'un livre par id dans un tableau de livres. */
 static int findBookIndexById(Book *books, int nbBooks, int bookId) {
     int i;
 
@@ -17,7 +17,6 @@ static int findBookIndexById(Book *books, int nbBooks, int bookId) {
     return -1;
 }
 
-/* Cherche l'indice d'un id dans la liste des emprunts utilisateur. */
 static int findBorrowedIndex(User *u, int bookId) {
     int i;
 
@@ -31,33 +30,30 @@ static int findBorrowedIndex(User *u, int bookId) {
 
 void initUser(User *u, const char *login, const char *password, int role) {
     int i;
-    /* strcpy copie les chaines caractere par caractere */
-    strcpy(u->login,    login);
+
+    strcpy(u->login, login);
     strcpy(u->password, password);
     u->role = role;
-    /* aucun livre emprunte au depart */
     u->nbBorrowed = 0;
-     /* on parcourt le tableau pour tout initialiser a vide
-     * -1 signifie "aucun livre" pour les IDs
-     *  0 signifie "pas de deadline" pour les heures limites */
+
     for (i = 0; i < MAX_BORROWS; i++) {
         u->borrowedIds[i] = -1;
-        u->deadlines[i]   = 0;
+        u->deadlines[i] = 0;
     }
 }
 
 void displayUser(User *u) {
     if (u == NULL) {
         printf("Erreur : utilisateur invalide.\n");
-        return;  /* return sans valeur car la fonction est void */
+        return;
     }
+
     printf("  Login : %s\n", u->login);
     if (u->role == STUDENT) {
         printf("  Role  : Etudiant\n");
     } else {
         printf("  Role  : Professeur\n");
     }
- 
     printf("  Livres empruntes : %d\n", u->nbBorrowed);
 }
 
@@ -125,49 +121,42 @@ User *loginUser(User *users, int userCount, const char *login, const char *passw
     return user;
 }
 
-/* ============================================================
- *  canBorrow
- *  Verifie si l'utilisateur peut emprunter un livre.
- *  Retourne 1 s'il peut, 0 s'il ne peut pas.
- *  Regles du projet :
- *  - etudiant  : max 3 livres, bloque si retard
- *  - professeur: max 5 livres, bloque si retard
- * ============================================================ */
- int canBorrow(User *u) {
-    /* regle 1 : bloque si l'utilisateur a des livres en retard */
+int canBorrow(User *u) {
+    if (u == NULL) {
+        return 0;
+    }
+
     if (hasLateBooks(u)) {
         return 0;
     }
- 
-    /* regle 2 : un etudiant ne peut pas depasser 3 livres */
+
     if (isStudent(u) && u->nbBorrowed >= 3) {
         return 0;
     }
- 
-    /* regle 3 : un professeur ne peut pas depasser 5 livres */
+
     if (!isStudent(u) && u->nbBorrowed >= 5) {
         return 0;
     }
- 
-    /* toutes les regles sont respectees : il peut emprunter */
+
     return 1;
 }
+
 int hasLateBooks(User *u) {
     int i;
- 
-    /* on recupere l'heure actuelle en secondes */
-    long now = (long)time(NULL);
- 
-    /* on parcourt tous les livres empruntes */
+    long now;
+
+    if (u == NULL) {
+        return 0;
+    }
+
+    now = (long)time(NULL);
     for (i = 0; i < u->nbBorrowed; i++) {
-        /* deadlines[i] > 0 verifie qu'une deadline existe bien
-         * now > deadlines[i] verifie que l'heure est depassee */
         if (u->deadlines[i] > 0 && now > u->deadlines[i]) {
-            return 1;  /* au moins un livre est en retard */
+            return 1;
         }
     }
- 
-    return 0;  /* aucun retard */
+
+    return 0;
 }
 
 int borrowBook(User *u, Book *books, int nbBooks, int bookId) {
@@ -178,24 +167,17 @@ int borrowBook(User *u, Book *books, int nbBooks, int bookId) {
     if (u == NULL || books == NULL || bookId <= 0) {
         return 0;
     }
-    if (!canBorrow(u)) {
-        return 0;
-    }
-    if (u->nbBorrowed >= MAX_BORROWS) {
+    if (!canBorrow(u) || u->nbBorrowed >= MAX_BORROWS) {
         return 0;
     }
 
     bookIndex = findBookIndexById(books, nbBooks, bookId);
-    if (bookIndex == -1) {
-        return 0;
-    }
-    if (books[bookIndex].available == 0) {
+    if (bookIndex == -1 || books[bookIndex].available == 0) {
         return 0;
     }
 
     books[bookIndex].available = 0;
-    strncpy(books[bookIndex].borrower, u->login, MAX_LOGIN - 1);
-    books[bookIndex].borrower[MAX_LOGIN - 1] = '\0';
+    strcpy(books[bookIndex].borrower, u->login);
 
     u->borrowedIds[u->nbBorrowed] = bookId;
     now = (long)time(NULL);
@@ -268,7 +250,14 @@ void displayBorrowedBooks(User *u, Book *books, int nbBooks) {
             continue;
         }
 
-        printf("  [%d] %s - %s", books[bookIndex].id, books[bookIndex].title, books[bookIndex].author);
+        printf(
+            "  [%d] %s - %s - deadline: %ld",
+            books[bookIndex].id,
+            books[bookIndex].title,
+            books[bookIndex].author,
+            u->deadlines[i]
+        );
+
         if (u->deadlines[i] > 0 && now > u->deadlines[i]) {
             printf(" (en retard)\n");
         } else {

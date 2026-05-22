@@ -6,15 +6,12 @@
 
 #define MAX_USERS 100
 
-/* Vide ce qui reste dans l'entree clavier. */
 static void clearInputBuffer(void) {
     int c;
     while ((c = getchar()) != '\n' && c != EOF) {
-        /* rien */
     }
 }
 
-/* Lit un entier au clavier, et redemande tant que ce n'est pas un nombre. */
 static int readInt(const char *prompt) {
     int value;
     int ok;
@@ -32,7 +29,6 @@ static int readInt(const char *prompt) {
     }
 }
 
-/* Lit un texte simple (une ligne) au clavier. */
 static void readText(const char *prompt, char *buffer, int size) {
     printf("%s", prompt);
     if (fgets(buffer, size, stdin) == NULL) {
@@ -42,7 +38,10 @@ static void readText(const char *prompt, char *buffer, int size) {
     buffer[strcspn(buffer, "\n")] = '\0';
 }
 
+<<<<<<< HEAD
 /* Ajoute quelques livres de test pour avancer sans fichier de sauvegarde. */
+=======
+>>>>>>> 31a8dcc (Add borrow/return and file save)
 static void initTestBooks(Library *lib) {
     createBookAndAdd(lib, 1, "Livre 1", "Auteur 1", "Roman");
     createBookAndAdd(lib, 2, "Livre 2", "Auteur 2", "Informatique");
@@ -50,11 +49,241 @@ static void initTestBooks(Library *lib) {
     createBookAndAdd(lib, 4, "Livre 4", "Auteur 1", "Science");
 }
 
+<<<<<<< HEAD
 /* Creation de compte tres simple. */
+=======
+static int saveBooks(const Library *lib) {
+    FILE *file;
+    int i;
+
+    if (lib == NULL || lib->books == NULL) {
+        return 0;
+    }
+
+    file = fopen(BOOKS_FILE, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    fprintf(file, "%d\n", lib->nbBooks);
+    for (i = 0; i < lib->nbBooks; i++) {
+        const char *borrower = lib->books[i].borrower[0] == '\0' ? "_" : lib->books[i].borrower;
+        fprintf(
+            file,
+            "%d;%s;%s;%s;%d;%s\n",
+            lib->books[i].id,
+            lib->books[i].title,
+            lib->books[i].author,
+            lib->books[i].category,
+            lib->books[i].available,
+            borrower
+        );
+    }
+
+    fclose(file);
+    return 1;
+}
+
+static int loadBooks(Library *lib) {
+    FILE *file;
+    int expectedCount;
+    int i;
+
+    if (lib == NULL || lib->books == NULL) {
+        return 0;
+    }
+
+    file = fopen(BOOKS_FILE, "r");
+    if (file == NULL) {
+        return 0;
+    }
+
+    if (fscanf(file, "%d", &expectedCount) != 1 || expectedCount < 0) {
+        fclose(file);
+        return 0;
+    }
+
+    lib->nbBooks = 0;
+
+    for (i = 0; i < expectedCount; i++) {
+        Book b;
+        char title[MAX_TITLE];
+        char author[MAX_AUTHOR];
+        char category[MAX_CATEGORY];
+        char borrower[MAX_LOGIN];
+        int id;
+        int available;
+
+        if (fscanf(file, " %d;%99[^;];%99[^;];%49[^;];%d;%49[^\n]", &id, title, author, category, &available, borrower) != 6) {
+            lib->nbBooks = 0;
+            fclose(file);
+            return 0;
+        }
+
+        if (id <= 0 || (available != 0 && available != 1)) {
+            lib->nbBooks = 0;
+            fclose(file);
+            return 0;
+        }
+
+        initBook(&b, id, title, author, category);
+        b.available = available;
+
+        if (available == 0) {
+            if (borrower[0] == '\0' || strcmp(borrower, "_") == 0) {
+                lib->nbBooks = 0;
+                fclose(file);
+                return 0;
+            }
+            strcpy(b.borrower, borrower);
+        } else {
+            b.borrower[0] = '\0';
+        }
+
+        if (!addBookToLibrary(lib, &b)) {
+            lib->nbBooks = 0;
+            fclose(file);
+            return 0;
+        }
+    }
+
+    fclose(file);
+    return 1;
+}
+
+static int saveUsers(const User *users, int userCount) {
+    FILE *file;
+    int i;
+    int j;
+
+    if (users == NULL || userCount < 0) {
+        return 0;
+    }
+
+    file = fopen(USERS_FILE, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    fprintf(file, "%d\n", userCount);
+    for (i = 0; i < userCount; i++) {
+        fprintf(file, "%s;%s;%d;%d", users[i].login, users[i].password, users[i].role, users[i].nbBorrowed);
+        for (j = 0; j < MAX_BORROWS; j++) {
+            fprintf(file, ";%d;%ld", users[i].borrowedIds[j], users[i].deadlines[j]);
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
+    return 1;
+}
+
+static int loadUsers(User *users, int *userCount, int maxUsers) {
+    FILE *file;
+    int expectedCount;
+    int i;
+
+    if (users == NULL || userCount == NULL || maxUsers <= 0) {
+        return 0;
+    }
+
+    file = fopen(USERS_FILE, "r");
+    if (file == NULL) {
+        return 0;
+    }
+
+    if (fscanf(file, "%d", &expectedCount) != 1 || expectedCount < 0 || expectedCount > maxUsers) {
+        fclose(file);
+        return 0;
+    }
+
+    *userCount = 0;
+
+    for (i = 0; i < expectedCount; i++) {
+        char login[MAX_LOGIN];
+        char password[MAX_PASSWORD];
+        int role;
+        int nbBorrowed;
+        int j;
+
+        if (fscanf(file, " %49[^;];%49[^;];%d;%d", login, password, &role, &nbBorrowed) != 4) {
+            *userCount = 0;
+            fclose(file);
+            return 0;
+        }
+
+        if ((role != STUDENT && role != PROFESSOR) || nbBorrowed < 0 || nbBorrowed > MAX_BORROWS) {
+            *userCount = 0;
+            fclose(file);
+            return 0;
+        }
+
+        initUser(&users[*userCount], login, password, role);
+        users[*userCount].nbBorrowed = nbBorrowed;
+
+        for (j = 0; j < MAX_BORROWS; j++) {
+            int borrowedId;
+            long deadline;
+
+            if (fscanf(file, ";%d;%ld", &borrowedId, &deadline) != 2) {
+                *userCount = 0;
+                fclose(file);
+                return 0;
+            }
+
+            if (j < nbBorrowed) {
+                if (borrowedId <= 0 || deadline <= 0) {
+                    *userCount = 0;
+                    fclose(file);
+                    return 0;
+                }
+                users[*userCount].borrowedIds[j] = borrowedId;
+                users[*userCount].deadlines[j] = deadline;
+            } else {
+                users[*userCount].borrowedIds[j] = -1;
+                users[*userCount].deadlines[j] = 0;
+            }
+        }
+
+        (*userCount)++;
+    }
+
+    fclose(file);
+    return 1;
+}
+
+static int saveAll(const Library *lib, const User *users, int userCount) {
+    if (!saveBooks(lib)) {
+        return 0;
+    }
+    if (!saveUsers(users, userCount)) {
+        return 0;
+    }
+    return 1;
+}
+
+static void loadDataOrInitDefaults(Library *lib, User *users, int *userCount) {
+    int booksLoaded = loadBooks(lib);
+    int usersLoaded = loadUsers(users, userCount, MAX_USERS);
+
+    if (!booksLoaded || !usersLoaded) {
+        lib->nbBooks = 0;
+        initTestBooks(lib);
+        initDefaultUsers(users, userCount);
+
+        if (!saveAll(lib, users, *userCount)) {
+            printf("Attention: impossible de creer les fichiers de sauvegarde.\n");
+        } else {
+            printf("Fichiers de sauvegarde crees automatiquement.\n");
+        }
+    }
+}
+
+>>>>>>> 31a8dcc (Add borrow/return and file save)
 static int createAccount(User *users, int *userCount) {
     char login[MAX_LOGIN];
     char password[MAX_PASSWORD];
-    int role = 0;
+    int role;
 
     readText("Nouveau login: ", login, MAX_LOGIN);
     readText("Nouveau mot de passe: ", password, MAX_PASSWORD);
@@ -73,7 +302,6 @@ static int createAccount(User *users, int *userCount) {
     return 1;
 }
 
-/* Connexion tres simple par login + mot de passe. */
 static User *loginAccount(User *users, int userCount) {
     char login[MAX_LOGIN];
     char password[MAX_PASSWORD];
@@ -92,7 +320,6 @@ static User *loginAccount(User *users, int userCount) {
     return user;
 }
 
-/* Menu de connexion avant d'acceder au menu principal. */
 static void printAuthMenu(void) {
     printf("\n===== AUTHENTIFICATION =====\n");
     printf("1. Se connecter\n");
@@ -100,7 +327,6 @@ static void printAuthMenu(void) {
     printf("0. Quitter\n");
 }
 
-/* Affiche le menu principal apres connexion. */
 static void printMenu(const User *currentUser) {
     printf("\n===== MENU =====\n");
     printf("Connecte: %s (%s)\n", currentUser->login, getRoleText(currentUser));
@@ -116,6 +342,7 @@ static void printMenu(const User *currentUser) {
     printf("10. Emprunter un livre\n");
     printf("11. Retourner un livre\n");
     printf("12. Afficher mes emprunts\n");
+    printf("13. Rechercher un livre par categorie\n");
     printf("0. Quitter\n");
 }
 
@@ -139,11 +366,9 @@ int main(void) {
     printf("- etudiant1 / 1234\n");
     printf("- prof1 / 1234\n");
 
-    /* Boucle principale: auth puis actions bibliotheque. */
     while (running) {
         int choice;
 
-        /* Tant qu'aucun utilisateur n'est connecte, on reste sur l'ecran d'auth. */
         if (currentUser == NULL) {
             printAuthMenu();
             choice = readInt("Votre choix: ");
@@ -172,7 +397,6 @@ int main(void) {
             char author[MAX_AUTHOR];
             char category[MAX_CATEGORY];
 
-            /* Regle du projet: un etudiant ne peut pas ajouter. */
             if (isStudent(currentUser)) {
                 printf("Seul un professeur peut ajouter un livre.\n");
                 continue;
@@ -193,7 +417,6 @@ int main(void) {
             char confirm[10];
             Book *bookToDelete;
 
-            /* Regle du projet: un etudiant ne peut pas supprimer. */
             if (isStudent(currentUser)) {
                 printf("Seul un professeur peut supprimer un livre.\n");
                 continue;
@@ -206,13 +429,11 @@ int main(void) {
                 continue;
             }
 
-            /* On evite de supprimer un livre qui est deja emprunte. */
             if (bookToDelete->available == 0) {
                 printf("Suppression impossible: livre actuellement emprunte.\n");
                 continue;
             }
 
-            /* Petite securite: on demande une confirmation avant suppression. */
             readText("Confirmer suppression ? (o/n): ", confirm, 10);
             if (confirm[0] != 'o' && confirm[0] != 'O') {
                 printf("Suppression annulee.\n");
@@ -228,7 +449,6 @@ int main(void) {
             char titleToSearch[MAX_TITLE];
             int index;
 
-            /* Recherche souple: on peut taper une partie du titre, sans respecter la casse. */
             readText("Titre a rechercher: ", titleToSearch, MAX_TITLE);
             index = searchByTitle(lib.books, lib.nbBooks, titleToSearch);
 
@@ -254,11 +474,9 @@ int main(void) {
         } else if (choice == 7) {
             displayAvailableBooks(lib.books, lib.nbBooks);
         } else if (choice == 8) {
-            /* Tri du tableau par titre puis affichage du resultat. */
             sortByTitle(lib.books, lib.nbBooks);
             displayLibrary(&lib);
         } else if (choice == 9) {
-            /* Tri du tableau par auteur puis affichage du resultat. */
             sortByAuthor(lib.books, lib.nbBooks);
             displayLibrary(&lib);
         } else if (choice == 10) {
@@ -297,6 +515,11 @@ int main(void) {
             }
         } else if (choice == 12) {
             displayBorrowedBooks(currentUser, lib.books, lib.nbBooks);
+        } else if (choice == 13) {
+            char categoryToSearch[MAX_CATEGORY];
+
+            readText("Categorie a rechercher: ", categoryToSearch, MAX_CATEGORY);
+            searchByCategory(lib.books, lib.nbBooks, categoryToSearch);
         } else if (choice == 4) {
             currentUser = NULL;
             printf("Deconnexion.\n");
