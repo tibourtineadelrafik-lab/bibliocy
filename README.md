@@ -115,7 +115,13 @@ Verification rapide avant commit:
 make clean && make
 printf '0\n' | ./bibliocy
 ```
-
+```bash
+cd ~
+git clone https://github.com/tibourtineadelrafik-lab/bibliocy.git
+cd bibliocy
+make
+./bibliotech
+```
 ## Fichiers de donnees
 
 - `books.txt`: etat des livres
