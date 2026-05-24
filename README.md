@@ -94,7 +94,7 @@ make
 Lancer:
 
 ```bash
-./bibliotech
+./bibliocy
 ```
 
 Lancer via Makefile:
