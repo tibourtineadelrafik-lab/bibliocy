@@ -115,6 +115,9 @@ Verification rapide avant commit:
 make clean && make
 printf '0\n' | ./bibliocy
 ```
+
+Code entier: 
+
 ```bash
 cd ~
 git clone https://github.com/tibourtineadelrafik-lab/bibliocy.git
