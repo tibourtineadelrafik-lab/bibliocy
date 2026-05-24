@@ -1,3 +1,6 @@
+#ifndef USER_H
+#define USER_H
+
 #include "book.h"
 #define MAX_LOGIN     50
 #define MAX_PASSWORD  50
@@ -18,9 +21,9 @@ typedef struct {
 /* Remplit les champs d'un User avec les informations de base */
 void initUser(User *u, const char *login, const char *password, int role);
 /* Affiche les informations d'un utilisateur dans le terminal */
-void displayUser(User *u);
+void displayUser(const User *u);
 /* Retourne 1 si l'utilisateur est un etudiant, 0 sinon */
-int  isStudent(User *u);
+int  isStudent(const User *u);
 /* Retourne "Etudiant" ou "Professeur" selon le role */
 const char *getRoleText(const User *u);
 /* Cherche un utilisateur par login */
@@ -33,12 +36,14 @@ int createUserAccount(User *users, int *userCount, int maxUsers, const char *log
 User *loginUser(User *users, int userCount, const char *login, const char *password);
 /* Retourne 1 si l'utilisateur peut encore emprunter un livre
  * Verifie les regles : retard, nombre max de livres         */
-int  canBorrow(User *u);
+int  canBorrow(const User *u);
 /* Retourne 1 si l'utilisateur a au moins un livre en retard */
-int  hasLateBooks(User *u);
+int  hasLateBooks(const User *u);
 /* Emprunte un livre si les regles sont respectees */
 int borrowBook(User *u, Book *books, int nbBooks, int bookId);
 /* Retourne un livre emprunte par l'utilisateur */
 int returnBook(User *u, Book *books, int nbBooks, int bookId);
 /* Affiche la liste des livres empruntes par l'utilisateur */
 void displayBorrowedBooks(User *u, Book *books, int nbBooks);
+
+#endif

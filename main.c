@@ -1,280 +1,18 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "library.h"
-#include "user.h"
+#include "file_io.h"
+#include "input_helper.h"
 
 #define MAX_USERS 100
-#define BOOKS_FILE "books.txt"
-#define USERS_FILE "users.txt"
 
-static void clearInputBuffer(void) {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF) {
+/* Centralise le message d'erreur de sauvegarde apres une action qui modifie les donnees. */
+static void saveWithWarning(const Library *lib, const User *users, int userCount) {
+    if (!saveAll(lib, users, userCount)) {
+        printf("Attention: sauvegarde impossible.\n");
     }
 }
 
-static int readInt(const char *prompt) {
-    int value;
-    int ok;
-
-    while (1) {
-        printf("%s", prompt);
-        ok = scanf("%d", &value);
-        clearInputBuffer();
-
-        if (ok == 1) {
-            return value;
-        }
-
-        printf("Entrez un nombre valide.\n");
-    }
-}
-
-static void readText(const char *prompt, char *buffer, int size) {
-    printf("%s", prompt);
-    if (fgets(buffer, size, stdin) == NULL) {
-        buffer[0] = '\0';
-        return;
-    }
-    buffer[strcspn(buffer, "\n")] = '\0';
-}
-
-static void initTestBooks(Library *lib) {
-    createBookAndAdd(lib, 1, "Livre 1", "Auteur 1", "Roman");
-    createBookAndAdd(lib, 2, "Livre 2", "Auteur 2", "Informatique");
-    createBookAndAdd(lib, 3, "Livre 3", "Auteur 3", "Histoire");
-    createBookAndAdd(lib, 4, "Livre 4", "Auteur 1", "Science");
-}
-
-static int saveBooks(const Library *lib) {
-    FILE *file;
-    int i;
-
-    if (lib == NULL || lib->books == NULL) {
-        return 0;
-    }
-
-    file = fopen(BOOKS_FILE, "w");
-    if (file == NULL) {
-        return 0;
-    }
-
-    fprintf(file, "%d\n", lib->nbBooks);
-    for (i = 0; i < lib->nbBooks; i++) {
-        const char *borrower = lib->books[i].borrower[0] == '\0' ? "_" : lib->books[i].borrower;
-        fprintf(
-            file,
-            "%d;%s;%s;%s;%d;%s\n",
-            lib->books[i].id,
-            lib->books[i].title,
-            lib->books[i].author,
-            lib->books[i].category,
-            lib->books[i].available,
-            borrower
-        );
-    }
-
-    fclose(file);
-    return 1;
-}
-
-static int loadBooks(Library *lib) {
-    FILE *file;
-    int expectedCount;
-    int i;
-
-    if (lib == NULL || lib->books == NULL) {
-        return 0;
-    }
-
-    file = fopen(BOOKS_FILE, "r");
-    if (file == NULL) {
-        return 0;
-    }
-
-    if (fscanf(file, "%d", &expectedCount) != 1 || expectedCount < 0) {
-        fclose(file);
-        return 0;
-    }
-
-    lib->nbBooks = 0;
-
-    for (i = 0; i < expectedCount; i++) {
-        Book b;
-        char title[MAX_TITLE];
-        char author[MAX_AUTHOR];
-        char category[MAX_CATEGORY];
-        char borrower[MAX_LOGIN];
-        int id;
-        int available;
-
-        if (fscanf(file, " %d;%99[^;];%99[^;];%49[^;];%d;%49[^\n]", &id, title, author, category, &available, borrower) != 6) {
-            lib->nbBooks = 0;
-            fclose(file);
-            return 0;
-        }
-
-        if (id <= 0 || (available != 0 && available != 1)) {
-            lib->nbBooks = 0;
-            fclose(file);
-            return 0;
-        }
-
-        initBook(&b, id, title, author, category);
-        b.available = available;
-
-        if (available == 0) {
-            if (borrower[0] == '\0' || strcmp(borrower, "_") == 0) {
-                lib->nbBooks = 0;
-                fclose(file);
-                return 0;
-            }
-            strcpy(b.borrower, borrower);
-        } else {
-            b.borrower[0] = '\0';
-        }
-
-        if (!addBookToLibrary(lib, &b)) {
-            lib->nbBooks = 0;
-            fclose(file);
-            return 0;
-        }
-    }
-
-    fclose(file);
-    return 1;
-}
-
-static int saveUsers(const User *users, int userCount) {
-    FILE *file;
-    int i;
-    int j;
-
-    if (users == NULL || userCount < 0) {
-        return 0;
-    }
-
-    file = fopen(USERS_FILE, "w");
-    if (file == NULL) {
-        return 0;
-    }
-
-    fprintf(file, "%d\n", userCount);
-    for (i = 0; i < userCount; i++) {
-        fprintf(file, "%s;%s;%d;%d", users[i].login, users[i].password, users[i].role, users[i].nbBorrowed);
-        for (j = 0; j < MAX_BORROWS; j++) {
-            fprintf(file, ";%d;%ld", users[i].borrowedIds[j], users[i].deadlines[j]);
-        }
-        fprintf(file, "\n");
-    }
-
-    fclose(file);
-    return 1;
-}
-
-static int loadUsers(User *users, int *userCount, int maxUsers) {
-    FILE *file;
-    int expectedCount;
-    int i;
-
-    if (users == NULL || userCount == NULL || maxUsers <= 0) {
-        return 0;
-    }
-
-    file = fopen(USERS_FILE, "r");
-    if (file == NULL) {
-        return 0;
-    }
-
-    if (fscanf(file, "%d", &expectedCount) != 1 || expectedCount < 0 || expectedCount > maxUsers) {
-        fclose(file);
-        return 0;
-    }
-
-    *userCount = 0;
-
-    for (i = 0; i < expectedCount; i++) {
-        char login[MAX_LOGIN];
-        char password[MAX_PASSWORD];
-        int role;
-        int nbBorrowed;
-        int j;
-
-        if (fscanf(file, " %49[^;];%49[^;];%d;%d", login, password, &role, &nbBorrowed) != 4) {
-            *userCount = 0;
-            fclose(file);
-            return 0;
-        }
-
-        if ((role != STUDENT && role != PROFESSOR) || nbBorrowed < 0 || nbBorrowed > MAX_BORROWS) {
-            *userCount = 0;
-            fclose(file);
-            return 0;
-        }
-
-        initUser(&users[*userCount], login, password, role);
-        users[*userCount].nbBorrowed = nbBorrowed;
-
-        for (j = 0; j < MAX_BORROWS; j++) {
-            int borrowedId;
-            long deadline;
-
-            if (fscanf(file, ";%d;%ld", &borrowedId, &deadline) != 2) {
-                *userCount = 0;
-                fclose(file);
-                return 0;
-            }
-
-            if (j < nbBorrowed) {
-                if (borrowedId <= 0 || deadline <= 0) {
-                    *userCount = 0;
-                    fclose(file);
-                    return 0;
-                }
-                users[*userCount].borrowedIds[j] = borrowedId;
-                users[*userCount].deadlines[j] = deadline;
-            } else {
-                users[*userCount].borrowedIds[j] = -1;
-                users[*userCount].deadlines[j] = 0;
-            }
-        }
-
-        (*userCount)++;
-    }
-
-    fclose(file);
-    return 1;
-}
-
-static int saveAll(const Library *lib, const User *users, int userCount) {
-    if (!saveBooks(lib)) {
-        return 0;
-    }
-    if (!saveUsers(users, userCount)) {
-        return 0;
-    }
-    return 1;
-}
-
-static void loadDataOrInitDefaults(Library *lib, User *users, int *userCount) {
-    int booksLoaded = loadBooks(lib);
-    int usersLoaded = loadUsers(users, userCount, MAX_USERS);
-
-    if (!booksLoaded || !usersLoaded) {
-        lib->nbBooks = 0;
-        initTestBooks(lib);
-        initDefaultUsers(users, userCount);
-
-        if (!saveAll(lib, users, *userCount)) {
-            printf("Attention: impossible de creer les fichiers de sauvegarde.\n");
-        } else {
-            printf("Fichiers de sauvegarde crees automatiquement.\n");
-        }
-    }
-}
-
+/* Cree un nouveau compte utilisateur depuis la saisie clavier. */
 static int createAccount(User *users, int *userCount) {
     char login[MAX_LOGIN];
     char password[MAX_PASSWORD];
@@ -286,7 +24,7 @@ static int createAccount(User *users, int *userCount) {
     printf("Role:\n");
     printf("1. Etudiant\n");
     printf("2. Professeur\n");
-    role = readInt("Votre choix: ");
+    role = readIntInRange("Votre choix: ", 1, 2);
 
     if (!createUserAccount(users, userCount, MAX_USERS, login, password, role)) {
         printf("Creation impossible.\n");
@@ -338,7 +76,48 @@ static void printMenu(const User *currentUser) {
     printf("11. Retourner un livre\n");
     printf("12. Afficher mes emprunts\n");
     printf("13. Rechercher un livre par categorie\n");
+    printf("14. Tableau de bord\n");
     printf("0. Quitter\n");
+}
+
+static void printDashboard(const Library *lib, const User *users, int userCount, const User *currentUser) {
+    int i;
+    int availableBooks = 0;
+    int borrowedBooks = 0;
+    int studentCount = 0;
+    int professorCount = 0;
+
+    if (lib == NULL || users == NULL || currentUser == NULL) {
+        printf("Donnees indisponibles.\n");
+        return;
+    }
+
+    for (i = 0; i < lib->nbBooks; i++) {
+        if (lib->books[i].available == 1) {
+            availableBooks++;
+        } else {
+            borrowedBooks++;
+        }
+    }
+
+    for (i = 0; i < userCount; i++) {
+        if (users[i].role == STUDENT) {
+            studentCount++;
+        } else if (users[i].role == PROFESSOR) {
+            professorCount++;
+        }
+    }
+
+    printf("\n===== TABLEAU DE BORD =====\n");
+    printf("Livres totaux        : %d\n", lib->nbBooks);
+    printf("Livres disponibles   : %d\n", availableBooks);
+    printf("Livres empruntes     : %d\n", borrowedBooks);
+    printf("Utilisateurs totaux  : %d\n", userCount);
+    printf("Etudiants            : %d\n", studentCount);
+    printf("Professeurs          : %d\n", professorCount);
+    printf("Mes emprunts         : %d\n", currentUser->nbBorrowed);
+    printf("J'ai un retard       : %s\n", hasLateBooks(currentUser) ? "Oui" : "Non");
+    printf("Je peux emprunter    : %s\n", canBorrow(currentUser) ? "Oui" : "Non");
 }
 
 int main(void) {
@@ -354,7 +133,7 @@ int main(void) {
         return 1;
     }
 
-    loadDataOrInitDefaults(&lib, users, &userCount);
+    loadDataOrInitDefaults(&lib, users, &userCount, MAX_USERS);
 
     printf("Comptes de test (si premier lancement):\n");
     printf("- etudiant1 / 1234\n");
@@ -365,25 +144,23 @@ int main(void) {
 
         if (currentUser == NULL) {
             printAuthMenu();
-            choice = readInt("Votre choix: ");
+            choice = readIntInRange("Votre choix: ", 0, 2);
 
             if (choice == 1) {
                 currentUser = loginAccount(users, userCount);
             } else if (choice == 2) {
-                if (createAccount(users, &userCount) && !saveAll(&lib, users, userCount)) {
-                    printf("Attention: sauvegarde impossible.\n");
+                if (createAccount(users, &userCount)) {
+                    saveWithWarning(&lib, users, userCount);
                 }
-            } else if (choice == 0) {
-                running = 0;
             } else {
-                printf("Choix invalide.\n");
+                running = 0;
             }
 
             continue;
         }
 
         printMenu(currentUser);
-        choice = readInt("Votre choix: ");
+        choice = readIntInRange("Votre choix: ", 0, 14);
 
         if (choice == 1) {
             displayLibrary(&lib);
@@ -405,9 +182,7 @@ int main(void) {
 
             if (createBookAndAdd(&lib, id, title, author, category)) {
                 printf("Livre ajoute.\n");
-                if (!saveAll(&lib, users, userCount)) {
-                    printf("Attention: sauvegarde impossible.\n");
-                }
+                saveWithWarning(&lib, users, userCount);
             } else {
                 printf("Ajout impossible (id deja utilise ou memoire).\n");
             }
@@ -441,9 +216,7 @@ int main(void) {
 
             if (removeBookById(&lib, idToDelete)) {
                 printf("Livre supprime.\n");
-                if (!saveAll(&lib, users, userCount)) {
-                    printf("Attention: sauvegarde impossible.\n");
-                }
+                saveWithWarning(&lib, users, userCount);
             } else {
                 printf("Livre non trouve.\n");
             }
@@ -488,9 +261,7 @@ int main(void) {
             idToBorrow = readInt("ID du livre a emprunter: ");
             if (borrowBook(currentUser, lib.books, lib.nbBooks, idToBorrow)) {
                 printf("Emprunt valide.\n");
-                if (!saveAll(&lib, users, userCount)) {
-                    printf("Attention: sauvegarde impossible.\n");
-                }
+                saveWithWarning(&lib, users, userCount);
             } else {
                 book = getBookById(&lib, idToBorrow);
                 if (book == NULL) {
@@ -508,9 +279,7 @@ int main(void) {
             idToReturn = readInt("ID du livre a retourner: ");
             if (returnBook(currentUser, lib.books, lib.nbBooks, idToReturn)) {
                 printf("Retour valide.\n");
-                if (!saveAll(&lib, users, userCount)) {
-                    printf("Attention: sauvegarde impossible.\n");
-                }
+                saveWithWarning(&lib, users, userCount);
             } else {
                 book = getBookById(&lib, idToReturn);
                 if (book == NULL) {
@@ -528,6 +297,8 @@ int main(void) {
 
             readText("Categorie a rechercher: ", categoryToSearch, MAX_CATEGORY);
             searchByCategory(lib.books, lib.nbBooks, categoryToSearch);
+        } else if (choice == 14) {
+            printDashboard(&lib, users, userCount, currentUser);
         } else if (choice == 4) {
             currentUser = NULL;
             printf("Deconnexion.\n");

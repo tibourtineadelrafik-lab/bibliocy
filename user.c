@@ -5,6 +5,8 @@
 #include "user.h"
 
 #define DAY_SECONDS (24L * 60L * 60L)
+#define BORROW_SECONDS_STUDENT (2L * 60L)
+#define BORROW_SECONDS_PROFESSOR (3L * 60L)
 
 static int findBookIndexById(Book *books, int nbBooks, int bookId) {
     int i;
@@ -28,6 +30,33 @@ static int findBorrowedIndex(User *u, int bookId) {
     return -1;
 }
 
+static void formatDuration(long seconds, char *buffer, int size) {
+    long days;
+    long hours;
+    long minutes;
+    long secs;
+    long remaining;
+
+    if (seconds < 0) {
+        seconds = 0;
+    }
+
+    days = seconds / DAY_SECONDS;
+    remaining = seconds % DAY_SECONDS;
+    hours = remaining / 3600L;
+    remaining = remaining % 3600L;
+    minutes = remaining / 60L;
+    secs = remaining % 60L;
+
+    if (days > 0) {
+        snprintf(buffer, size, "%ld j %ld h %ld min", days, hours, minutes);
+    } else if (hours > 0) {
+        snprintf(buffer, size, "%ld h %ld min", hours, minutes);
+    } else {
+        snprintf(buffer, size, "%ld min %ld sec", minutes, secs);
+    }
+}
+
 void initUser(User *u, const char *login, const char *password, int role) {
     int i;
 
@@ -42,7 +71,7 @@ void initUser(User *u, const char *login, const char *password, int role) {
     }
 }
 
-void displayUser(User *u) {
+void displayUser(const User *u) {
     if (u == NULL) {
         printf("Erreur : utilisateur invalide.\n");
         return;
@@ -57,7 +86,7 @@ void displayUser(User *u) {
     printf("  Livres empruntes : %d\n", u->nbBorrowed);
 }
 
-int isStudent(User *u) {
+int isStudent(const User *u) {
     return u->role == STUDENT;
 }
 
@@ -121,7 +150,7 @@ User *loginUser(User *users, int userCount, const char *login, const char *passw
     return user;
 }
 
-int canBorrow(User *u) {
+int canBorrow(const User *u) {
     if (u == NULL) {
         return 0;
     }
@@ -141,7 +170,7 @@ int canBorrow(User *u) {
     return 1;
 }
 
-int hasLateBooks(User *u) {
+int hasLateBooks(const User *u) {
     int i;
     long now;
 
@@ -161,7 +190,7 @@ int hasLateBooks(User *u) {
 
 int borrowBook(User *u, Book *books, int nbBooks, int bookId) {
     int bookIndex;
-    int deadlineDays;
+    long borrowSeconds;
     long now;
 
     if (u == NULL || books == NULL || bookId <= 0) {
@@ -181,8 +210,8 @@ int borrowBook(User *u, Book *books, int nbBooks, int bookId) {
 
     u->borrowedIds[u->nbBorrowed] = bookId;
     now = (long)time(NULL);
-    deadlineDays = isStudent(u) ? 7 : 14;
-    u->deadlines[u->nbBorrowed] = now + (deadlineDays * DAY_SECONDS);
+    borrowSeconds = isStudent(u) ? BORROW_SECONDS_STUDENT : BORROW_SECONDS_PROFESSOR;
+    u->deadlines[u->nbBorrowed] = now + borrowSeconds;
     u->nbBorrowed++;
     return 1;
 }
@@ -230,6 +259,8 @@ void displayBorrowedBooks(User *u, Book *books, int nbBooks) {
     int i;
     int bookIndex;
     long now;
+    long remainingSeconds;
+    char durationText[64];
 
     if (u == NULL || books == NULL) {
         printf("Erreur : donnees invalides.\n");
@@ -250,18 +281,16 @@ void displayBorrowedBooks(User *u, Book *books, int nbBooks) {
             continue;
         }
 
-        printf(
-            "  [%d] %s - %s - deadline: %ld",
-            books[bookIndex].id,
-            books[bookIndex].title,
-            books[bookIndex].author,
-            u->deadlines[i]
-        );
+        printf("  [%d] %s\n", books[bookIndex].id, books[bookIndex].title);
+        printf("     Auteur : %s\n", books[bookIndex].author);
 
-        if (u->deadlines[i] > 0 && now > u->deadlines[i]) {
-            printf(" (en retard)\n");
+        remainingSeconds = u->deadlines[i] - now;
+        if (u->deadlines[i] > 0 && remainingSeconds < 0) {
+            formatDuration(-remainingSeconds, durationText, 64);
+            printf("     Statut : En retard de %s\n", durationText);
         } else {
-            printf(" (dans les delais)\n");
+            formatDuration(remainingSeconds, durationText, 64);
+            printf("     Statut : A rendre dans %s\n", durationText);
         }
     }
 }

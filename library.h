@@ -1,3 +1,6 @@
+#ifndef LIBRARY_H
+#define LIBRARY_H
+
 #include "book.h"
 
 typedef struct {
@@ -23,3 +26,5 @@ int removeBookById(Library *lib, int id);
 
 /* Affiche toute la bibliotheque. */
 void displayLibrary(Library *lib);
+
+#endif

@@ -76,6 +76,9 @@ int createBookAndAdd(Library *lib, int id, char *title, char *author, char *cate
     if (id <= 0 || title == NULL || author == NULL || category == NULL) {
         return 0;
     }
+    if (title[0] == '\0' || author[0] == '\0' || category[0] == '\0') {
+        return 0;
+    }
 
     initBook(&b, id, title, author, category);
     return addBookToLibrary(lib, &b);

@@ -111,10 +111,20 @@ int searchByAuthor(Book *books, int nbBooks, char *author) {
 void searchByCategory(Book *books, int nbBooks, char *category) {
     int found = 0;
     int i;
+    char searchText[MAX_CATEGORY];
+    char currentCategory[MAX_CATEGORY];
+
+    if (books == NULL || category == NULL || category[0] == '\0') {
+        printf("Categorie invalide.\n");
+        return;
+    }
+
+    toLowerCopy(category, searchText, MAX_CATEGORY);
 
     printf("=== Livres de la categorie : %s ===\n", category);
     for (i = 0; i < nbBooks; i++) {
-        if (strcmp(books[i].category, category) == 0) {
+        toLowerCopy(books[i].category, currentCategory, MAX_CATEGORY);
+        if (strstr(currentCategory, searchText) != NULL) {
             displayBook(&books[i]);
             found = 1;
         }
