@@ -8,10 +8,30 @@
 
 /* Donnees minimales au premier lancement. */
 static void initTestBooks(Library *lib) {
-    createBookAndAdd(lib, 1, "Livre 1", "Auteur 1", "Roman");
-    createBookAndAdd(lib, 2, "Livre 2", "Auteur 2", "Informatique");
-    createBookAndAdd(lib, 3, "Livre 3", "Auteur 3", "Histoire");
-    createBookAndAdd(lib, 4, "Livre 4", "Auteur 1", "Science");
+    createBookAndAdd(lib, 1, "One Piece", "Eiichiro Oda", "Manga");
+    createBookAndAdd(lib, 2, "Jujutsu Kaisen", "Gege Akutami", "Manga");
+    createBookAndAdd(lib, 3, "Five Nights at Freddy's: The Silver Eyes", "Scott Cawthon et Kira Breed-Wrisley", "Horreur");
+    createBookAndAdd(lib, 4, "Pourquoi Madame Ansermin est meilleure en informatique que Monsieur Grignon", "Auteur invente", "Informatique");
+
+    createBookAndAdd(lib, 5, "Spider-Man: Blue", "Jeph Loeb et Tim Sale", "BD Marvel");
+    createBookAndAdd(lib, 6, "Batman: The Killing Joke", "Alan Moore et Brian Bolland", "BD DC Comics");
+    createBookAndAdd(lib, 7, "Percy Jackson: Le Voleur de foudre", "Rick Riordan", "Fantasy");
+    createBookAndAdd(lib, 8, "Harry Potter a l'ecole des sorciers", "J.K. Rowling", "Fantasy");
+
+    createBookAndAdd(lib, 9, "League of Legends: Realms of Runeterra", "Riot Games", "Fantasy");
+    createBookAndAdd(lib, 10, "Les Miserables", "Victor Hugo", "Roman");
+    createBookAndAdd(lib, 11, "Notre-Dame de Paris", "Victor Hugo", "Roman");
+    createBookAndAdd(lib, 12, "Le Seigneur des anneaux", "J.R.R. Tolkien", "Fantasy");
+
+    createBookAndAdd(lib, 13, "Hunger Games", "Suzanne Collins", "Science-fiction");
+    createBookAndAdd(lib, 14, "Divergente", "Veronica Roth", "Science-fiction");
+    createBookAndAdd(lib, 15, "L'Attaque des Titans", "Hajime Isayama", "Manga");
+    createBookAndAdd(lib, 16, "Dragon Ball", "Akira Toriyama", "Manga");
+
+    createBookAndAdd(lib, 17, "Death Note", "Tsugumi Ohba et Takeshi Obata", "Manga");
+    createBookAndAdd(lib, 18, "Sherlock Holmes: Une etude en rouge", "Arthur Conan Doyle", "Policier");
+    createBookAndAdd(lib, 19, "Arsene Lupin, gentleman-cambrioleur", "Maurice Leblanc", "Policier");
+    createBookAndAdd(lib, 20, "Le Tour du monde en quatre-vingts jours", "Jules Verne", "Aventure");
 }
 
 /* Ecrit la liste des livres dans books.txt. */
